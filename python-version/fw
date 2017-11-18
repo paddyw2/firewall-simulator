@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import sys
 
 """
 Creates a ruleset based on the rules
@@ -6,19 +7,22 @@ file provided as an argument
 """
 def create_ruleset(ruleset_in, ruleset_out):
   with open('rules.txt') as rule_file:
+    line_count = 1
     for line in rule_file:
       line = line.strip()
       if(line[0] == 'i'):
-        create_rule(line, ruleset_in)
+        create_rule(line, ruleset_in, line_count)
       else:
-        create_rule(line, ruleset_out)
+        create_rule(line, ruleset_out, line_count)
+      line_count += 1
 
 """
 Specifically creates a rule in the
 incoming ruleset
 """
-def create_rule(line, ruleset):
+def create_rule(line, ruleset, line_number):
   items = line.split()
+  est_flag = len(items) - 4
   ip = items[2]
   ip_sections = ip.split('/')
   numbers = ip_sections[0]
@@ -26,7 +30,7 @@ def create_rule(line, ruleset):
   mask = 0
   if(len(ip_sections)>1):
     mask = 32 - int(ip_sections[1])
-  ruleset.append([add_mask(convert_ip(numbers), mask), items[3], items[1]])
+  ruleset.append([add_mask(convert_ip(numbers), mask), items[3].split(','), est_flag, items[1], line_number])
 
 """
 Takes a string integer ("10") and
@@ -64,6 +68,13 @@ index to "*" to indicate wildcard
 values
 """
 def add_mask(binary_str_ip, mask):
+  # get mask by index
+  # i.e. 16 masks to 15th index
+  # so divide 15 by 8 to get
+  # number of periods to account
+  # for
+  quot, remain = divmod(mask-1, 8)
+  mask = mask + quot
   result = binary_str_ip
   end_index = len(binary_str_ip)-1
   for i in range(mask):
@@ -76,12 +87,90 @@ def add_mask(binary_str_ip, mask):
   return result
 
 """
+Loops over each line in stdin and
+applies the relevant ruleset to
+each
+"""
+def process_stdin(ruleset_in, ruleset_out):
+  counter = 0
+  for line in sys.stdin:
+    if(counter == 5):
+      1 == 1
+    line = line.strip()
+    if(line[0] == "i"):
+      status = process_input(line, ruleset_in)
+    else:
+      status = process_input(line, ruleset_out)
+
+    if(status[0] == 1):
+      print("accept(" + str(status[1]) + ") " + line)
+    else:
+      print("drop(" + str(status[1]) + ") " + line)
+
+    counter += 1
+
+"""
+Takes a packet line and rulset as
+parameter and checks:
+  1) If the IP addresses match
+  2) If 1), then check ports
+  3) If 1),2), then check established flag
+If all satisfied, return list with 0 or 1
+indicating whether to drop or accept packet
+and the line number the rule originated
+from
+"""
+def process_input(line, ruleset):
+  items = line.split()
+  ip_binary = convert_ip(items[1].split('.'))
+  for rule in ruleset:
+    # check binary strings
+    match = True
+    for i in range(len(ip_binary)):
+      if(ip_binary[i] == rule[0][i]):
+        continue
+      elif(rule[0][i] == "*"):
+        match = True
+        break
+      else:
+        match = False
+        break
+
+    if(match):
+      port = False
+      # now check port
+      if(items[2] in rule[1]):
+        port = True
+      elif("*" in rule[1]):
+        port = True
+      else:
+        continue
+      # check est flag
+      if((int(items[3]) == int(rule[2])) or (int(rule[2]) == 0)):
+        # if we have found a full match
+        # then decide to drop or accept
+        if(rule[3] == "accept"):
+          return [1,rule[4]]
+        else:
+          return [0,rule[4]]
+      else:
+        continue
+    else:
+      continue
+
+  # default is to drop packet
+  return [0,""]
+
+"""
 Runs main program logic
 """
 def main():
   ruleset_in = []
   ruleset_out = []
   create_ruleset(ruleset_in, ruleset_out)
+  # now read stdin and apply rules
+  process_stdin(ruleset_in, ruleset_out)
+  return
   print("In rules: ")
   for rule in ruleset_in:
     print(str(rule))
@@ -89,4 +178,5 @@ def main():
   for rule in ruleset_out:
     print(str(rule))
 
+  
 main()
