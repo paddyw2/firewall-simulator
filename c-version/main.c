@@ -7,6 +7,40 @@ int get_ruleset(char ** ruleset_in, char ** ruleset_out, int size)
     // reads rules text file and creates a 2d array for each
     // in line, and another for each out line
     // returns the size of the rulesets
+    FILE *fptr;
+    fptr = fopen("rule.txt", "r");
+    if(!fptr) {
+        printf("Error opening rule file\n");
+        exit(EXIT_FAILURE);
+    }
+    int filesize = get_filesize("rule.txt");
+    if(filesize < 0) {
+        printf("Filesize failed\n");
+        exit(EXIT_FAILURE);
+    }
+    char file_buffer[filesize];
+    bzero(file_buffer, filesize);
+    int read = fread(file_buffer, sizeof(char), filesize, fptr);
+    if(read != filesize) {
+        printf("Error reading file\n");
+        exit(EXIT_FAILURE);
+    }
+    int start_index = 0;
+    int line_index = 0;
+    char val = 0;
+    while(1 != 1) {
+        val = file_buffer[start_index+line_index];
+        if(val == 'i') {
+            // then create an in rule
+            // IP starts at index 11
+            char ip_val[3];
+            ip_val[0] = file_buffer[start_index+line_index+11];
+        } else {
+            // create an out rule
+        }
+    }
+
+
     return 0;
 }
 
@@ -73,7 +107,28 @@ int change_ruleset_size(char ** ruleset_in, char ** ruleset_out, int size)
     // if the rule text file has more in or out rules than the
     // standard size of the ruleset arrays, realloc both and
     // return new sizes
+    printf("Not implemented - exiting\n");
+    exit(EXIT_FAILURE);
     return 0;
+}
+
+/*
+ * Returns the filesize of the specified
+ * filename
+ * If an error occurs, returns -1
+ */
+int get_filesize(char filename[])
+{
+    // create and open file
+    FILE *fptr;
+    fptr = fopen(filename, "r");
+    if(!fptr) {
+        return -1;
+    }
+    fseek(fptr, 0, SEEK_END);
+    int sz = ftell(fptr);
+    fclose(fptr);
+    return sz;
 }
 
 int main(int argc, char * argv[])
