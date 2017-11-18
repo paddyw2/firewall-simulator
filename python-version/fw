@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+
+"""
+Creates a ruleset based on the rules
+file provided as an argument
+"""
+def create_ruleset(ruleset_in, ruleset_out):
+  with open('rules.txt') as rule_file:
+    for line in rule_file:
+      line = line.strip()
+      if(line[0] == 'i'):
+        create_rule(line, ruleset_in)
+      else:
+        create_rule(line, ruleset_out)
+
+"""
+Specifically creates a rule in the
+incoming ruleset
+"""
+def create_rule(line, ruleset):
+  items = line.split()
+  ip = items[2]
+  ip_sections = ip.split('/')
+  numbers = ip_sections[0]
+  numbers = numbers.split('.')
+  mask = 0
+  if(len(ip_sections)>1):
+    mask = 32 - int(ip_sections[1])
+  ruleset.append([add_mask(convert_ip(numbers), mask), items[3], items[1]])
+
+"""
+Takes a string integer ("10") and
+converts it to a binary string
+("00001010")
+If the "integer" is a star, it
+simply returns a star
+"""
+def convert_int_binary_str(int_string):
+  binary_string = ["0","0","0","0","0","0","0","0"]
+  if(int_string == "*"):
+    return int_string
+  value = int(int_string)
+  index = 7
+  while(value != 0):
+    value,index_val = divmod(value, 2)
+    binary_string[index] = str(index_val)
+    index -= 1
+  return "".join(binary_string)
+
+"""
+Converts a list of ip sections
+into one long binary string
+"""
+def convert_ip(numbers):
+  result = ""
+  for num in numbers:
+    result += convert_int_binary_str(num) + "."
+  return result[:-1]
+
+"""
+Takes a long binary IP string as input
+and converts #mask values from end
+index to "*" to indicate wildcard
+values
+"""
+def add_mask(binary_str_ip, mask):
+  result = binary_str_ip
+  end_index = len(binary_str_ip)-1
+  for i in range(mask):
+    if(result[i] == "."):
+      continue
+    if(i == 0):
+      result = result[0:end_index-i] + "*"
+    else:
+      result = result[0:end_index-i] + "*" + result[end_index-i+1:]
+  return result
+
+"""
+Runs main program logic
+"""
+def main():
+  ruleset_in = []
+  ruleset_out = []
+  create_ruleset(ruleset_in, ruleset_out)
+  print("In rules: ")
+  for rule in ruleset_in:
+    print(str(rule))
+  print("Out rules: ")
+  for rule in ruleset_out:
+    print(str(rule))
+
+main()
