@@ -110,11 +110,7 @@ def process_stdin(ruleset_in, ruleset_out):
         status = process_input(line, ruleset_out)
       else:
         sys.exit()
-
-      if(status[0] == 1):
-        print("accept(" + str(status[1]) + ") " + line)
-      else:
-        print("drop(" + str(status[1]) + ") " + line)
+      print(str(status[0]) + "(" + str(status[1]) + ") " + line)
   except:
     print("Error: bad stdin format")
     sys.exit()
@@ -160,17 +156,14 @@ def process_input(line, ruleset):
       if((int(items[3]) == int(rule[2])) or (int(rule[2]) == 0)):
         # if we have found a full match
         # then decide to drop or accept
-        if(rule[3] == "accept"):
-          return [1,rule[4]]
-        else:
-          return [0,rule[4]]
+        return [rule[3],rule[4]]
       else:
         continue
     else:
       continue
 
   # default is to drop packet
-  return [0,""]
+  return ["drop",""]
 
 """
 Runs main program logic
@@ -178,7 +171,7 @@ Runs main program logic
 def main():
   # check arguments
   if(len(sys.argv) != 2):
-    print("Error: not enough arguments provided")
+    print("Usage: cat [packet file] | ./fw [rule file]")
     return
 
   ruleset_in = []
