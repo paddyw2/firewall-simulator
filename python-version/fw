@@ -5,16 +5,25 @@ import sys
 Creates a ruleset based on the rules
 file provided as an argument
 """
-def create_ruleset(ruleset_in, ruleset_out):
-  with open('rules.txt') as rule_file:
-    line_count = 1
-    for line in rule_file:
-      line = line.strip()
-      if(line[0] == 'i'):
-        create_rule(line, ruleset_in, line_count)
-      else:
-        create_rule(line, ruleset_out, line_count)
-      line_count += 1
+def create_ruleset(ruleset_in, ruleset_out, filename):
+  try:
+    with open(filename) as rule_file:
+      line_count = 1
+      for line in rule_file:
+        line = line.strip()
+        try:
+          if(line[0] == 'i'):
+            create_rule(line, ruleset_in, line_count)
+          else:
+            create_rule(line, ruleset_out, line_count)
+          line_count += 1
+        except:
+          print("Error: bad rule file format")
+          sys.exit()
+  except:
+    print("Error: ruleset could not be created from file")
+    sys.exit()
+
 
 """
 Specifically creates a rule in the
@@ -92,22 +101,24 @@ applies the relevant ruleset to
 each
 """
 def process_stdin(ruleset_in, ruleset_out):
-  counter = 0
-  for line in sys.stdin:
-    if(counter == 5):
-      1 == 1
-    line = line.strip()
-    if(line[0] == "i"):
-      status = process_input(line, ruleset_in)
-    else:
-      status = process_input(line, ruleset_out)
+  try:
+    for line in sys.stdin:
+      line = line.strip()
+      if(line.split()[0] == "in"):
+        status = process_input(line, ruleset_in)
+      elif(line.split()[0] == "out"):
+        status = process_input(line, ruleset_out)
+      else:
+        sys.exit()
 
-    if(status[0] == 1):
-      print("accept(" + str(status[1]) + ") " + line)
-    else:
-      print("drop(" + str(status[1]) + ") " + line)
+      if(status[0] == 1):
+        print("accept(" + str(status[1]) + ") " + line)
+      else:
+        print("drop(" + str(status[1]) + ") " + line)
+  except:
+    print("Error: bad stdin format")
+    sys.exit()
 
-    counter += 1
 
 """
 Takes a packet line and rulset as
@@ -165,18 +176,16 @@ def process_input(line, ruleset):
 Runs main program logic
 """
 def main():
+  # check arguments
+  if(len(sys.argv) != 2):
+    print("Error: not enough arguments provided")
+    return
+
   ruleset_in = []
   ruleset_out = []
-  create_ruleset(ruleset_in, ruleset_out)
+  # create rules
+  create_ruleset(ruleset_in, ruleset_out, sys.argv[1])
   # now read stdin and apply rules
   process_stdin(ruleset_in, ruleset_out)
-  return
-  print("In rules: ")
-  for rule in ruleset_in:
-    print(str(rule))
-  print("Out rules: ")
-  for rule in ruleset_out:
-    print(str(rule))
-
   
 main()
