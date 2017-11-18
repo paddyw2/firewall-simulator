@@ -12,10 +12,15 @@ def create_ruleset(ruleset_in, ruleset_out, filename):
       for line in rule_file:
         line = line.strip()
         try:
-          if(line[0] == 'i'):
+          if(len(line.split()) == 0 or line[0] == "#"):
+            continue
+          elif(line.split()[0] == "in"):
             create_rule(line, ruleset_in, line_count)
-          else:
+          elif(line.split()[0] == "out"):
             create_rule(line, ruleset_out, line_count)
+          else:
+            sys.exit()
+
           line_count += 1
         except:
           print("Error: bad rule file format")
