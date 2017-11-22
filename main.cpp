@@ -11,6 +11,7 @@ int main(int argc, char * argv[])
     }
 
     firewall fw;
+    fw.load_ruleset();
     fw.process_stdin();
 
     return 0;

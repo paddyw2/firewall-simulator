@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+import sys
+
+"""
+Creates a ruleset based on the rules
+file provided as an argument
+"""
+def create_ruleset(ruleset_in, ruleset_out, filename):
+  try:
+    with open(filename) as rule_file:
+      line_count = 1
+      for line in rule_file:
+        line = line.strip()
+        try:
+          if(len(line.split()) == 0 or line[0] == "#"):
+            continue
+          elif(line.split()[0] == "in"):
+            create_rule(line, ruleset_in, line_count)
+          elif(line.split()[0] == "out"):
+            create_rule(line, ruleset_out, line_count)
+          else:
+            sys.exit()
+
+          line_count += 1
+        except:
+          print("Error: bad rule file format")
+          sys.exit()
+  except:
+    print("Error: ruleset could not be created from file")
+    sys.exit()
+
+
+"""
+Specifically creates a rule in the
+incoming ruleset
+"""
+def create_rule(line, ruleset, line_number):
+  items = line.split()
+  est_flag = len(items) - 4
+  ip = items[2]
+  ip_sections = ip.split('/')
+  numbers = ip_sections[0]
+  numbers = numbers.split('.')
+  mask = 0
+  if(len(ip_sections)>1):
+    mask = 32 - int(ip_sections[1])
+  ruleset.append([add_mask(convert_ip(numbers), mask), items[3].split(','), est_flag, items[1], line_number])
+
+"""
+Takes a string integer ("10") and
+converts it to a binary string
+("00001010")
+If the "integer" is a star, it
+simply returns a star
+"""
+def convert_int_binary_str(int_string):
+  binary_string = ["0","0","0","0","0","0","0","0"]
+  if(int_string == "*"):
+    return int_string
+  value = int(int_string)
+  index = 7
+  while(value != 0):
+    value,index_val = divmod(value, 2)
+    binary_string[index] = str(index_val)
+    index -= 1
+  return "".join(binary_string)
+
+"""
+Converts a list of ip sections
+into one long binary string
+"""
+def convert_ip(numbers):
+  result = ""
+  for num in numbers:
+    result += convert_int_binary_str(num) + "."
+  return result[:-1]
+
+"""
+Takes a long binary IP string as input
+and converts #mask values from end
+index to "*" to indicate wildcard
+values
+"""
+def add_mask(binary_str_ip, mask):
+  # get mask by index
+  # i.e. 16 masks to 15th index
+  # so divide 15 by 8 to get
+  # number of periods to account
+  # for
+  quot, remain = divmod(mask-1, 8)
+  mask = mask + quot
+  result = binary_str_ip
+  end_index = len(binary_str_ip)-1
+  for i in range(mask):
+    if(result[i] == "."):
+      continue
+    if(i == 0):
+      result = result[0:end_index-i] + "*"
+    else:
+      result = result[0:end_index-i] + "*" + result[end_index-i+1:]
+  return result
+
+"""
+Loops over each line in stdin and
+applies the relevant ruleset to
+each
+"""
+def process_stdin(ruleset_in, ruleset_out):
+  try:
+    for line in sys.stdin:
+      line = line.strip()
+      if(line.split()[0] == "in"):
+        status = process_input(line, ruleset_in)
+      elif(line.split()[0] == "out"):
+        status = process_input(line, ruleset_out)
+      else:
+        sys.exit()
+      print(str(status[0]) + "(" + str(status[1]) + ") " + line)
+  except:
+    print("Error: bad stdin format")
+    sys.exit()
+
+
+"""
+Takes a packet line and rulset as
+parameter and checks:
+  1) If the IP addresses match
+  2) If 1), then check ports
+  3) If 1),2), then check established flag
+If all satisfied, return list with 0 or 1
+indicating whether to drop or accept packet
+and the line number the rule originated
+from
+"""
+def process_input(line, ruleset):
+  items = line.split()
+  ip_binary = convert_ip(items[1].split('.'))
+  for rule in ruleset:
+    # check binary strings
+    match = True
+    for i in range(len(ip_binary)):
+      if(ip_binary[i] == rule[0][i]):
+        continue
+      elif(rule[0][i] == "*"):
+        match = True
+        break
+      else:
+        match = False
+        break
+
+    if(match):
+      port = False
+      # now check port
+      if(items[2] in rule[1]):
+        port = True
+      elif("*" in rule[1]):
+        port = True
+      else:
+        continue
+      # check est flag
+      if((int(items[3]) == int(rule[2])) or (int(rule[2]) == 0)):
+        # if we have found a full match
+        # then decide to drop or accept
+        return [rule[3],rule[4]]
+      else:
+        continue
+    else:
+      continue
+
+  # default is to drop packet
+  return ["drop",""]
+
+"""
+Runs main program logic
+"""
+def main():
+  # check arguments
+  if(len(sys.argv) != 2):
+    print("Usage: cat [packet file] | ./fw [rule file]")
+    return
+
+  ruleset_in = []
+  ruleset_out = []
+  # create rules
+  create_ruleset(ruleset_in, ruleset_out, sys.argv[1])
+  # now read stdin and apply rules
+  process_stdin(ruleset_in, ruleset_out)
+  
+main()
